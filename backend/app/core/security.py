@@ -1,12 +1,25 @@
-from fastapi import Header, HTTPException, status
+from fastapi import HTTPException, Security, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.core.config import settings
 
 
-def verify_admin_token(authorization: str | None = Header(default=None)) -> None:
-    expected = f"Bearer {settings.admin_token}"
-    if authorization != expected:
+bearer_scheme = HTTPBearer(auto_error=False)
+
+
+def verify_admin_token(
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+) -> None:
+    if credentials is None or credentials.scheme.lower() != "bearer":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Unauthorized",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if credentials.credentials != settings.admin_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized",
+            headers={"WWW-Authenticate": "Bearer"},
         )
